@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RD Report Summary Tool</title>
+    <link rel="stylesheet" href="node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-file-invoice-dollar"></i> RD Report Summary Tool</h1>
+            <p>Upload your RD Installment Report to verify totals and generate a professional summary</p>
+        </header>
+
+        <div class="content">
+            <div class="card upload-card">
+                <div class="upload-area" id="uploadTrigger">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h3>Upload RD Installment Report</h3>
+                    <p>Click to browse or drag & drop your PDF file</p>
+                    <button class="btn"><i class="fas fa-upload"></i> Select PDF File</button>
+                </div>
+                <input type="file" id="pdfInput" accept=".pdf" />
+            </div>
+
+            <div class="card loading" id="loadingSection" style="display: none;">
+                <div class="spinner"></div>
+                <h3>Analyzing your PDF document...</h3>
+                <p>This may take a few moments depending on file size</p>
+            </div>
+
+            <div class="card result-section" id="resultSection">
+                <div class="status-header success">
+                    <div class="status-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h2>Verification Successful</h2>
+                </div>
+
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <h3>Total Deposit</h3>
+                        <div class="value success" id="totalDeposit">₹0.00</div>
+                    </div>
+
+                    <div class="summary-card">
+                        <h3>Default Fee</h3>
+                        <div class="value" id="defaultFee">₹0.00</div>
+                    </div>
+
+                    <div class="summary-card">
+                        <h3>Summary Total</h3>
+                        <div class="value success" id="summaryTotal">₹0.00</div>
+                    </div>
+                </div>
+
+                <!-- Cash Counting Calculator -->
+                <div class="cash-counting">
+                    <div class="section-header">
+                        <i class="fas fa-calculator"></i>
+                        <h3>Cash Counting Calculator</h3>
+                        <p>Enter your cash denominations to match the verified deposit amount</p>
+                    </div>
+
+                    <div class="denomination-grid">
+                        <div class="denomination-card">
+                            <div class="denomination-label">₹500 Notes</div>
+                            <input type="number" class="denomination-input" data-value="500" min="0" placeholder="0">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+
+                        <div class="denomination-card">
+                            <div class="denomination-label">₹200 Notes</div>
+                            <input type="number" class="denomination-input" data-value="200" min="0" placeholder="0">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+
+                        <div class="denomination-card">
+                            <div class="denomination-label">₹100 Notes</div>
+                            <input type="number" class="denomination-input" data-value="100" min="0" placeholder="0">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+
+                        <div class="denomination-card">
+                            <div class="denomination-label">₹50 Notes</div>
+                            <input type="number" class="denomination-input" data-value="50" min="0" placeholder="0">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+
+                        <div class="denomination-card">
+                            <div class="denomination-label">₹20 Notes</div>
+                            <input type="number" class="denomination-input" data-value="20" min="0" placeholder="0">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+
+                        <div class="denomination-card">
+                            <div class="denomination-label">₹10 Notes</div>
+                            <input type="number" class="denomination-input" data-value="10" min="0" placeholder="0">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+
+                        <div class="denomination-card coins">
+                            <div class="denomination-label">Coins Amount</div>
+                            <input type="number" class="coins-input" min="0" placeholder="0.00" step="0.01">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+                    </div>
+
+                    <div class="totals-display">
+                        <div class="total-row">
+                            <div>Total Cash:</div>
+                            <div id="cashTotal">₹0.00</div>
+                        </div>
+
+                        <div class="total-row">
+                            <div>Coins Amount:</div>
+                            <div id="coinsAmount">₹0.00</div>
+                        </div>
+
+                        <div class="total-row grand-total">
+                            <div>Grand Total:</div>
+                            <div id="grandTotal">₹0.00</div>
+                        </div>
+
+                        <div class="comparison-row">
+                            <div>Verified Deposit:</div>
+                            <div id="verifiedDepositDisplay">₹0.00</div>
+                        </div>
+
+                        <div class="difference-row">
+                            <div>Difference:</div>
+                            <div id="differenceAmount">₹0.00</div>
+                        </div>
+
+                        <div id="differenceMessage" class="message"></div>
+                    </div>
+                </div>
+                <!-- End Cash Counting Calculator -->
+
+                <button class="btn btn-download" id="generatePdf" disabled>
+                    <i class="fas fa-file-pdf"></i> Download Verified Report
+                </button>
+
+                <div class="instructions">
+                    <h3><i class="fas fa-info-circle"></i> How It Works</h3>
+                    <ul>
+                        <li>This tool analyzes your RD Installment Report PDF to verify financial data</li>
+                        <li>It extracts deposit amounts, fees, and compares them with the summary total</li>
+                        <li>When verification is successful, you can download an updated PDF with a verification stamp
+                        </li>
+                        <li>All processing happens in your browser - your data never leaves your computer</li>
+                        <li>The tool now supports encrypted PDF files and handles currency symbols correctly</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="error-section" id="errorSection" style="display: none;">
+                <h3><i class="fas fa-exclamation-triangle"></i> Error Processing File</h3>
+                <p id="errorMessage">An unknown error occurred while processing your file</p>
+            </div>
+        </div>
+
+        <footer>
+            <p>RD Report Summary Tool &copy; 2023 | Secure Financial Document Processing</p>
+            <div class="footer-links">
+                <a href="#"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
+                <a href="#"><i class="fas fa-question-circle"></i> Help & Support</a>
+                <a href="#"><i class="fas fa-envelope"></i> Contact Us</a>
+            </div>
+        </footer>
+    </div>
+
+<!-- Replace the script tag at the end of body -->
+<script>
+  // Set PDF.js worker path before loading
+  window.pdfjsWorkerPath = 'pdf.worker.js';
+</script>
+<script type="module" src="script/index.js"></script>
+
+</body>
+
+</html>
