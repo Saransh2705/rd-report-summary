@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RD Report Summary Tool</title>
+    <link rel="stylesheet" href="./styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>📄 RD Report Summary Tool</h1>
+            <p>Upload your RD Installment Report to verify totals and generate a professional summary — fully offline</p>
+        </header>
+
+        <div class="content">
+            <div class="card upload-card">
+                <div class="upload-area" id="uploadTrigger">
+                    <div class="upload-icon">📤</div>
+                    <h3>Upload RD Installment Report</h3>
+                    <p>Tap to choose your PDF file</p>
+                    <button class="btn">📎 Select PDF File</button>
+                </div>
+                <input type="file" id="pdfInput" accept=".pdf,application/pdf" />
+            </div>
+
+            <div class="card loading" id="loadingSection" style="display: none;">
+                <div class="spinner"></div>
+                <h3>Analyzing your PDF document...</h3>
+                <p>This may take a few moments depending on file size</p>
+            </div>
+
+            <div class="card result-section" id="resultSection">
+                <div class="status-header success">
+                    <div class="status-icon">✅</div>
+                    <h2>Verification Successful</h2>
+                </div>
+
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <h3>Total Deposit</h3>
+                        <div class="value success" id="totalDeposit">₹0.00</div>
+                    </div>
+
+                    <div class="summary-card">
+                        <h3>Default Fee</h3>
+                        <div class="value" id="defaultFee">₹0.00</div>
+                    </div>
+
+                    <div class="summary-card">
+                        <h3>Summary Total</h3>
+                        <div class="value success" id="summaryTotal">₹0.00</div>
+                    </div>
+                </div>
+
+                <!-- Cash Counting Calculator -->
+                <div class="cash-counting">
+                    <div class="section-header">
+                        <span>🧮</span>
+                        <h3>Cash Counting Calculator</h3>
+                        <p>Enter your cash denominations to match the verified deposit amount</p>
+                    </div>
+
+                    <div class="denomination-grid">
+                        <div class="denomination-card">
+                            <div class="denomination-label">₹500 Notes</div>
+                            <input type="number" inputmode="numeric" class="denomination-input" data-value="500" min="0" placeholder="0">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+
+                        <div class="denomination-card">
+                            <div class="denomination-label">₹200 Notes</div>
+                            <input type="number" inputmode="numeric" class="denomination-input" data-value="200" min="0" placeholder="0">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+
+                        <div class="denomination-card">
+                            <div class="denomination-label">₹100 Notes</div>
+                            <input type="number" inputmode="numeric" class="denomination-input" data-value="100" min="0" placeholder="0">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+
+                        <div class="denomination-card">
+                            <div class="denomination-label">₹50 Notes</div>
+                            <input type="number" inputmode="numeric" class="denomination-input" data-value="50" min="0" placeholder="0">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+
+                        <div class="denomination-card">
+                            <div class="denomination-label">₹20 Notes</div>
+                            <input type="number" inputmode="numeric" class="denomination-input" data-value="20" min="0" placeholder="0">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+
+                        <div class="denomination-card">
+                            <div class="denomination-label">₹10 Notes</div>
+                            <input type="number" inputmode="numeric" class="denomination-input" data-value="10" min="0" placeholder="0">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+
+                        <div class="denomination-card coins">
+                            <div class="denomination-label">Coins Amount</div>
+                            <input type="number" inputmode="decimal" class="coins-input" min="0" placeholder="0.00" step="0.01">
+                            <div class="denomination-total">₹0.00</div>
+                        </div>
+                    </div>
+
+                    <div class="totals-display">
+                        <div class="total-row">
+                            <div>Total Cash:</div>
+                            <div id="cashTotal">₹0.00</div>
+                        </div>
+
+                        <div class="total-row">
+                            <div>Coins Amount:</div>
+                            <div id="coinsAmount">₹0.00</div>
+                        </div>
+
+                        <div class="total-row grand-total">
+                            <div>Grand Total:</div>
+                            <div id="grandTotal">₹0.00</div>
+                        </div>
+
+                        <div class="comparison-row">
+                            <div>Verified Deposit:</div>
+                            <div id="verifiedDepositDisplay">₹0.00</div>
+                        </div>
+
+                        <div class="difference-row">
+                            <div>Difference:</div>
+                            <div id="differenceAmount">₹0.00</div>
+                        </div>
+
+                        <div id="differenceMessage" class="message"></div>
+                    </div>
+                </div>
+                <!-- End Cash Counting Calculator -->
+
+                <button class="btn btn-download" id="generatePdf" disabled>
+                    📥 Download Verified Report
+                </button>
+
+                <div class="instructions">
+                    <h3>ℹ️ How It Works</h3>
+                    <ul>
+                        <li>This tool analyzes your RD Installment Report PDF to verify financial data</li>
+                        <li>It extracts deposit amounts, fees, and compares them with the summary total</li>
+                        <li>When verification is successful, you can save an updated PDF with a verification stamp</li>
+                        <li>Everything runs on your device - no internet connection is needed and your data never leaves your phone</li>
+                        <li>The tool supports encrypted PDF files and handles currency symbols correctly</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="error-section" id="errorSection" style="display: none;">
+                <h3>⚠️ Error Processing File</h3>
+                <p id="errorMessage">An unknown error occurred while processing your file</p>
+            </div>
+        </div>
+
+        <footer>
+            <p>RD Report Summary Tool | Secure Offline Financial Document Processing</p>
+        </footer>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+</body>
+
+</html>

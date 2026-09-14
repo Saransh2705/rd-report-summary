@@ -6,29 +6,69 @@ import { GlobalWorkerOptions } from 'pdfjs-dist';
 // Simple worker path setting
 GlobalWorkerOptions.workerSrc = 'pdf.worker.js';
 
+const RENDER_SCALE = 2; // ~144 DPI - crisp enough to read/print, keeps file size reasonable
+
+/**
+ * pdf-lib cannot decrypt PDF content streams at all - loading with
+ * { ignoreEncryption: true } only skips the "refuse to open" check and
+ * leaves the streams as undecrypted ciphertext, so copying pages through
+ * pdf-lib alone produces a corrupted/blank document. pdf.js *can* decrypt
+ * (that's how it renders the file correctly for viewing), so the only
+ * reliable way to hand pdf-lib a genuinely unlocked, correctly-rendered
+ * copy is to rasterize every page with pdf.js and rebuild a brand-new PDF
+ * from those images.
+ * @param {ArrayBuffer|Uint8Array} buffer
+ * @returns {Promise<{doc: PDFDocument, pages: import('pdf-lib').PDFPage[], lastPageTextItems: any[]}>}
+ */
+async function renderToUnlockedPdf(buffer) {
+    const pdfjsDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
+    const outDoc = await PDFDocument.create();
+    const pages = [];
+    let lastPageTextItems = [];
+
+    for (let i = 1; i <= pdfjsDoc.numPages; i++) {
+        const page = await pdfjsDoc.getPage(i);
+        const renderViewport = page.getViewport({ scale: RENDER_SCALE });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(renderViewport.width);
+        canvas.height = Math.ceil(renderViewport.height);
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+
+        const blob = await new Promise((resolve, reject) => {
+            canvas.toBlob(b => (b ? resolve(b) : reject(new Error('canvas.toBlob failed'))), 'image/png');
+        });
+        const pngBytes = new Uint8Array(await blob.arrayBuffer());
+        const pngImage = await outDoc.embedPng(pngBytes);
+
+        const pointViewport = page.getViewport({ scale: 1 }); // true PDF page size, in points
+        const newPage = outDoc.addPage([pointViewport.width, pointViewport.height]);
+        newPage.drawImage(pngImage, { x: 0, y: 0, width: pointViewport.width, height: pointViewport.height });
+        pages.push(newPage);
+
+        if (i === pdfjsDoc.numPages) {
+            lastPageTextItems = (await page.getTextContent()).items;
+        }
+    }
+
+    return { doc: outDoc, pages, lastPageTextItems };
+}
+
 export async function generateVerifiedPDF(file, totalDeposit, totalDefaultFee, summaryTotal, cashCountingData = null) {
-    // if (!cashCountingData) {
-    //     console.log("No cash counting data provided, skipping PDF generation.");
-    // } else {
-    //     console.log(cashCountingData);
-    // }
+    // `file` always comes from the browser file input/drag-drop as a
+    // File/Blob - arrayBuffer() covers it. (The old `Buffer` check here
+    // referenced the Node global, which only exists inside the packaged
+    // Electron shell with nodeIntegration on, not in a plain browser tab.)
+    const buffer = await file.arrayBuffer();
 
-    // Worker setup (not needed in Node, but kept for compatibility)
-
-    const buffer = file instanceof Buffer ? file : await file.arrayBuffer ? await file.arrayBuffer() : Buffer.from(file);
-
-    // Load the PDF (pdf-lib)
-    const pdfDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
-    const pages = pdfDoc.getPages();
+    // Once the totals are calculated, the report we hand back is always a
+    // fresh, genuinely unlocked copy - see renderToUnlockedPdf() above.
+    const { doc: pdfDoc, pages, lastPageTextItems } = await renderToUnlockedPdf(buffer);
     const lastPage = pages[pages.length - 1];
     const { width, height } = lastPage.getSize();
 
-    // Get last text item on last page (pdf.js)
-    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-    const content = await pdf.getPage(pdf.numPages).then(p => p.getTextContent());
-    const items = content.items;
-
     // Sort to find actual last text item
+    const items = [...lastPageTextItems];
     items.sort((a, b) => {
         const yA = a.transform?.[5] || 0;
         const yB = b.transform?.[5] || 0;
@@ -39,14 +79,9 @@ export async function generateVerifiedPDF(file, totalDeposit, totalDefaultFee, s
     });
 
     const lastItem = items[items.length - 1];
-    const lastY = lastItem.transform?.[5] || 0;
+    const lastY = lastItem?.transform?.[5] || 0;
     const spaceLeft = height - lastY;
     const percent = (spaceLeft / height) * 100;
-
-    // console.log("PDF height:", height);
-    // console.log("Last Y:", lastY);
-    // console.log("Space Left:", spaceLeft);
-    // console.log("Space Left (%):", percent.toFixed(2));
 
     // Font setup
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);

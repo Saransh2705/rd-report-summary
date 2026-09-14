@@ -1,48 +1,28 @@
-import { PDFDocument } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf';
-// In index.js, pdfProcessing.js, pdfGeneration.js
 import { GlobalWorkerOptions } from 'pdfjs-dist';
 
 // Simple worker path setting
 GlobalWorkerOptions.workerSrc = 'pdf.worker.js';
 
 /**
- * Re-renders the uploaded PDF into a new unlocked version (in memory)
+ * Process the uploaded PDF to extract financial values.
+ *
+ * These RD reports are typically saved with an owner-only PDF restriction
+ * (no password needed to open, editing/printing restricted). pdf.js has its
+ * own built-in decryption for that standard security handler and reads the
+ * real text straight from the file - unlike pdf-lib, which has no stream
+ * decryption at all, so `PDFDocument.load(..., { ignoreEncryption: true })`
+ * only skips the "refuse to open" check and leaves the content streams as
+ * undecrypted ciphertext. So extraction here goes straight to pdf.js on the
+ * original bytes rather than routing through pdf-lib first.
  * @param {File} file - The uploaded file
- * @returns {Promise<Uint8Array>} - The new, reprinted PDF bytes
- */
-async function reprintPDF(file) {
-  console.debug('[reprintPDF] Called with file:', file);
-  const buffer = await file.arrayBuffer();
-  console.debug('[reprintPDF] Got arrayBuffer of length:', buffer.byteLength);
-  const originalPdf = await PDFDocument.load(buffer, { ignoreEncryption: true });
-  console.debug('[reprintPDF] Loaded original PDF. Page count:', originalPdf.getPageCount());
-  const newPdf = await PDFDocument.create();
-  const copiedPages = await newPdf.copyPages(originalPdf, originalPdf.getPageIndices());
-  console.debug('[reprintPDF] Copied pages:', copiedPages.length);
-  copiedPages.forEach((page, idx) => {
-    newPdf.addPage(page);
-    console.debug(`[reprintPDF] Added page ${idx + 1}`);
-  });
-  const reprintedBytes = await newPdf.save();
-  console.debug('[reprintPDF] Saved new PDF. Byte length:', reprintedBytes.length);
-  return reprintedBytes;
-}
-
-/**
- * Process the re-rendered PDF to extract financial values
- * @param {File} file - The original uploaded PDF file
  * @returns {Promise<{totalDeposit: number, totalDefaultFee: number, summaryTotal: number}>}
  */
 export async function processPDF(file) {
   console.debug('[processPDF] Start processing file:', file);
 
-  // 🔄 First, reprint the PDF to remove restrictions
-  const cleanPdfBytes = await reprintPDF(file);
-  console.debug('[processPDF] Got clean PDF bytes. Length:', cleanPdfBytes.length);
-
-  // 🔍 Then extract data using pdfjs
-  const pdf = await pdfjsLib.getDocument({ data: cleanPdfBytes }).promise;
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
   console.debug('[processPDF] Loaded PDF with pdfjs. numPages:', pdf.numPages);
 
   let textContent = '';
@@ -52,7 +32,6 @@ export async function processPDF(file) {
     const content = await page.getTextContent();
     console.debug(`[processPDF] Page ${i} text items:`, content.items.length);
     const pageText = content.items.map(item => item.str).join(' ') + ' ';
-    console.debug(`[processPDF] Page ${i} text:`, pageText);
     textContent += pageText;
   }
   console.debug('[processPDF] Full textContent:', textContent);
